@@ -12,7 +12,9 @@ Spectrum eval_op::operator()(const DisneyMetal &bsdf) const {
         frame = -frame;
     }
     // Homework 1: implement this!
+    
 
+    
     return make_zero_spectrum();
 }
 
