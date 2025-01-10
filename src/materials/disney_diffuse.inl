@@ -15,11 +15,11 @@ Spectrum eval_op::operator()(const DisneyDiffuse &bsdf) const {
     Real roughness = eval(bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     Real n_dot_out = fmax((dot(dir_out, frame.n)) ,Real(0));
     Real n_dot_in = fmax(dot(dir_in, frame.n), Real(0));
-    Real n_dot_h_2 = pow(dot(dir_out, half_vector), Real(2));
+    Real out_dot_h_2 = pow(dot(dir_out, half_vector), Real(2));
     Spectrum base_color = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool );
     Real subsurface = eval(bsdf.subsurface, vertex.uv, vertex.uv_screen_size, texture_pool );
 
-    Real F_D_90 = 0.5 + 2 * roughness * n_dot_h_2;
+    Real F_D_90 = 0.5 + 2 * roughness * out_dot_h_2;
 
     Real F_D_in = (1 + (F_D_90 - 1) * pow( 1-n_dot_in, Real(5)));
     Real F_D_out = (1 + (F_D_90 - 1) * pow( 1-n_dot_out, Real(5)));
@@ -28,7 +28,7 @@ Spectrum eval_op::operator()(const DisneyDiffuse &bsdf) const {
 
     Spectrum f_diff = f * base_color / c_PI;
 
-    Real F_SS_90 = roughness * n_dot_h_2;
+    Real F_SS_90 = roughness * out_dot_h_2;
     Real F_SS_in = (1 + (F_SS_90 - 1) * pow( 1-n_dot_in, Real(5)));
     Real F_SS_out = (1 + (F_SS_90 - 1) * pow( 1-n_dot_out, Real(5)));
 
@@ -76,7 +76,6 @@ std::optional<BSDFSampleRecord> sample_bsdf_op::operator()(const DisneyDiffuse &
     return BSDFSampleRecord{
         to_world(frame, sample_cos_hemisphere(rnd_param_uv)),
         Real(0) /* eta */, eval(bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool)};  /* roughness */
-    // return {};
 }
 
 TextureSpectrum get_texture_op::operator()(const DisneyDiffuse &bsdf) const {
