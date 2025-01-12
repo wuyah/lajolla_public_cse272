@@ -22,18 +22,16 @@ Spectrum eval_op::operator()(const DisneyMetal &bsdf) const {
     roughness = std::clamp(roughness, Real(0.01), Real(1));
     Real r2 = pow(roughness, 2);
 
-    Real n_dot_out = fmax((dot(dir_out, frame.n)) ,Real(0));
-    Real n_dot_in = fmax(dot(dir_in, frame.n), Real(0));
-    Real out_dot_h = fmax(dot(dir_out, half_vector), Real(0));
+    Real n_dot_in = fabs(dot(dir_in, frame.n));
+    Real out_dot_h = fabs(dot(dir_out, half_vector));
 
     Spectrum base_color = eval(
         bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool );
     Real anisotropic = eval(
         bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool );
-    anisotropic = std::clamp(roughness, Real(0.01), Real(1));
+    // anisotropic = std::clamp(anisotropic, Real(0.01), Real(1));
 
     Vector3 F_m = base_color + (1-base_color) * pow(1 - out_dot_h, Real(5));
-
 
     Real aspect = sqrt( 1 - 0.9 * anisotropic );
     Real alpha_x = fmax( 0.0001, r2 / aspect );
@@ -70,25 +68,15 @@ Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
         return 0;
     }
 
-    // Spectrum S = eval(
-    //     bsdf., vertex.uv, vertex.uv_screen_size, texture_pool);
-    // Spectrum R = eval(
-    //     bsdf.diffuse_reflectance, vertex.uv, vertex.uv_screen_size, texture_pool);
-    // Real lS = luminance(S), lR = luminance(R);
-    // if (lS + lR <= 0) {
-    //     return 0;
-    // }
     Real roughness = eval(bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     Real anisotropic = eval( bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool );
     // Clamp roughness to avoid numerical issues.
     roughness = std::clamp(roughness, Real(0.001), Real(1));
     anisotropic = std::clamp(anisotropic, Real(0.001), Real(1));
 
-
     Real aspect = sqrt( 1 - 0.9 * anisotropic );
     Real alpha_x = fmax( 0.0001, pow(roughness, 2) / aspect );
     Real alpha_y = fmax( 0.0001, pow(roughness, 2) * aspect );
-
 
     Real G_in = smith_masking_disney(to_local(frame, dir_in), Vector2(alpha_x, alpha_y));
 
@@ -122,7 +110,7 @@ std::optional<BSDFSampleRecord>
         
     // Transform the micro normal to world space
     Vector3 half_vector = to_world(frame, 
-            sample_visible_normals_metal( to_local(frame, dir_in), Vector2(alpha_x, alpha_y), rnd_param_uv));
+            sample_visible_normals_ani( to_local(frame, dir_in), Vector2(alpha_x, alpha_y), rnd_param_uv));
 
     // Reflect over the world space normal
     Vector3 reflected = normalize(-dir_in + 2 * dot(dir_in, half_vector) * half_vector);
