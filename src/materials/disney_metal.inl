@@ -72,7 +72,7 @@ Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
     Real anisotropic = eval( bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool );
     // Clamp roughness to avoid numerical issues.
     roughness = std::clamp(roughness, Real(0.001), Real(1));
-    anisotropic = std::clamp(anisotropic, Real(0.001), Real(1));
+    // anisotropic = std::clamp(anisotropic, Real(0.001), Real(1));
 
     Real aspect = sqrt( 1 - 0.9 * anisotropic );
     Real alpha_x = fmax( 0.0001, pow(roughness, 2) / aspect );
@@ -82,12 +82,11 @@ Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
 
     Vector3 h_l = to_local(frame, half_vector);
     Real D_m = 1 / (c_PI  * alpha_x * alpha_y *
-                pow( (pow(h_l.x / alpha_x, 2) + pow(h_l.y / alpha_y, 2) + pow(h_l.z, 2)), 2 )
-                );
+                pow( (pow(h_l.x / alpha_x, 2) + pow(h_l.y / alpha_y, 2) + pow(h_l.z, 2)), 2 ));
     // (4 * cos_theta_v) is the Jacobian of the reflectiokn
-    Real spec_prob = (G_in * D_m) / (4 * n_dot_in);
+    Real pdf = (G_in * D_m) / (4 * n_dot_in);
     // For the diffuse lobe, we importance sample cos_theta_out
-    return spec_prob;
+    return pdf;
 }
 
 std::optional<BSDFSampleRecord>

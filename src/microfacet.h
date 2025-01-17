@@ -76,9 +76,18 @@ inline Real smith_masking_gtr2(const Vector3 &v_local, Real roughness) {
     Real alpha = roughness * roughness;
     Real a2 = alpha * alpha;
     Vector3 v2 = v_local * v_local;
-    Real Lambda = (-1 + sqrt(1 + (v2.x * a2 + v2.y * a2) / v2.z)) / 2;
-    return 1 / (1 + Lambda);
+    Real Lambda = (-1.0 + sqrt(1.0 + (v2.x * a2 + v2.y * a2) / v2.z)) / 2.0;
+    return Real(1.0) / (1.0 + Lambda);
 }
+
+inline Real smith_masking_gtr1(const Vector3 &v_local, Real roughness)
+{
+    Real a2 = roughness * roughness;
+    Vector3 v2 = v_local * v_local;
+    Real lambda = (sqrt(1 + (v2.x * a2 + v2.y * a2) / v2.z) - 1) / 2.0;
+    return 1.0 / (1 + lambda);
+}
+
 
 /// The masking term models the occlusion between the small mirrors of the microfacet models.
 /// See Eric Heitz's paper "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
@@ -131,33 +140,27 @@ inline Vector3 sample_visible_normals(const Vector3 &local_dir_in, Real alpha, c
 
 // Sample stratgy for disney clear code.
 inline Vector3 sample_visible_normals_cc(const Vector3 &local_dir_in,const Real alpha, const Vector2 &rnd_param) {
-    // The incoming direction is in the "ellipsodial configuration" in Heitz's paper
-    if (local_dir_in.z < 0) {
-        // Ensure the input is on top of the surface.
-        return -sample_visible_normals_cc(-local_dir_in, alpha, rnd_param);
-    }
+    Real a2 = alpha*alpha;
+    Real cosTheta = sqrt( 
+        (1 - pow(a2, 1 - rnd_param.x)) / (1 - a2)
+    );
+    Real sinTheta = sqrt(max(Real(0), Real(1) - cosTheta*cosTheta));
+    Real phi = Real(2*c_PI) * rnd_param.y;
 
-    Real a2 = alpha * alpha;
-    Real cos_h_e = sqrt( (1 - pow(a2, 1-rnd_param.x)) / (1 - a2) );
-    Real sin_h_e = sqrt( fmax(Real(0), Real(1) - cos_h_e * cos_h_e) );
-    Real phi = 2 * c_PI * rnd_param.y;
-    Real sin_h_a = sin( phi );
-    Real cos_h_a = cos( phi );
+    // -- Step 2: convert to local cartesian
+    Vector3 h_local = {
+        sinTheta * std::cos(phi) ,
+        sinTheta * std::sin(phi) ,
+        cosTheta
+    };
 
-    // Transform the incoming direction to the "hemisphere configuration".
-    Vector3 hemi_dir_in = normalize(
-        Vector3{alpha * local_dir_in.x, alpha * local_dir_in.y, local_dir_in.z});
+    // optional: ensure z>0
+    // if (h_local.z < 0) {
+    //     h_local.z = -h_local.z;
+    // }
 
-    // Sample based on hw1's pdf, 
-    Vector3 local_normal = normalize(
-        Vector3{sin_h_e * cos_h_a, sin_h_e * sin_h_a, cos_h_e});
+    return normalize(h_local); // though it should already be unit
 
-    // Reprojection onto hemisphere -- we get our sampled normal in hemisphere space.
-    Frame hemi_frame(hemi_dir_in);
-    Vector3 hemi_N = to_world(hemi_frame, local_normal);
-
-    // Transforming the normal back to the ellipsoid configuration
-    return normalize(Vector3{alpha * hemi_N.x, alpha * hemi_N.y, max(Real(0), hemi_N.z)});
 }
 
 // Sample method for disney glass:

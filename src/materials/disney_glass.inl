@@ -53,11 +53,6 @@ Spectrum eval_op::operator()(const DisneyGlass &bsdf) const {
     if(reflect) {
         f_g = baseColor * F_g * D_g * G_g / (4 * fabs(n_dot_in));
     } else {
-        if (h_dot_in < 0) {
-            h_dot_in = -h_dot_in;
-            h_dot_out = -h_dot_out;
-        }
-        // exit(-1);
         f_g =  sqrt(baseColor) * (1-F_g) * D_g * G_g * fabs(h_dot_in * h_dot_out) /
             (fabs(n_dot_in) * pow(h_dot_in + eta * h_dot_out, Real(2)) );
     }
@@ -101,6 +96,7 @@ Real pdf_sample_bsdf_op::operator()(const DisneyGlass &bsdf) const {
 
     Real anisotropic = eval(
         bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool );
+    anisotropic = std::clamp( anisotropic, Real(0.01), Real(1) );
 
     Real aspect = sqrt( 1 - 0.9 * anisotropic );
     Real alpha_x = fmax( 0.0001, r2 / aspect );
