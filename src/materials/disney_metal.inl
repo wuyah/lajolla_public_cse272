@@ -37,13 +37,16 @@ Spectrum eval_op::operator()(const DisneyMetal &bsdf) const {
     Real alpha_x = fmax( 0.0001, r2 / aspect );
     Real alpha_y = fmax( 0.0001, r2 * aspect );
 
+    Vector3 h2 = h_l * h_l;
+    Real ax2 = alpha_x * alpha_x;
+    Real ay2 = alpha_y * alpha_y;
+
     Real D_m = 1 / (c_PI  * alpha_x * alpha_y *
-                pow( (pow(h_l.x / alpha_x, 2) + pow(h_l.y / alpha_y, 2) + pow(h_l.z, 2)), 2)
-                );
+                pow( h2.x / ax2+ h2.y / ay2 + h2.z, 2) );
     Real G = smith_masking_disney(to_local(frame, dir_in), Vector2(alpha_x, alpha_y)) *
              smith_masking_disney(to_local(frame, dir_out), Vector2(alpha_x, alpha_y));
 
-    Vector3 f_metal = F_m * D_m * G / (4 * n_dot_in);
+    Vector3 f_metal = F_m * D_m * G / (4 * (n_dot_in));
     return f_metal;
 }
 
@@ -64,9 +67,6 @@ Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
     Real n_dot_in = dot(frame.n, dir_in);
     Real n_dot_out = dot(frame.n, dir_out);
     Real n_dot_h = dot(frame.n, half_vector);
-    if (n_dot_out <= 0 || n_dot_h <= 0) {
-        return 0;
-    }
 
     Real roughness = eval(bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     Real anisotropic = eval( bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool );
@@ -81,11 +81,14 @@ Real pdf_sample_bsdf_op::operator()(const DisneyMetal &bsdf) const {
     Real G_in = smith_masking_disney(to_local(frame, dir_in), Vector2(alpha_x, alpha_y));
 
     Vector3 h_l = to_local(frame, half_vector);
+    Vector3 h2 = h_l * h_l;
+    Real ax2 = alpha_x * alpha_x;
+    Real ay2 = alpha_y * alpha_y;
+
     Real D_m = 1 / (c_PI  * alpha_x * alpha_y *
-                pow( (pow(h_l.x / alpha_x, 2) + pow(h_l.y / alpha_y, 2) + pow(h_l.z, 2)), 2 ));
+                pow( h2.x / ax2+ h2.y / ay2 + h2.z, 2) );
     // (4 * cos_theta_v) is the Jacobian of the reflectiokn
-    Real pdf = (G_in * D_m) / (4 * n_dot_in);
-    // For the diffuse lobe, we importance sample cos_theta_out
+    Real pdf = (G_in * D_m) / (4 * (n_dot_in));
     return pdf;
 }
 

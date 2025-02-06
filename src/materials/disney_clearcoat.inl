@@ -35,7 +35,6 @@ Spectrum eval_op::operator()(const DisneyClearcoat &bsdf) const {
     Real G_c = smith_masking_gtr1(to_local(frame, dir_in), DISNEY_CC_ROUGHNESS) *
              smith_masking_gtr1(to_local(frame, dir_out), DISNEY_CC_ROUGHNESS);
 
-    // Real G = get_Gc(to_local(frame, dir_in), to_local(frame, dir_out));
 
     Real f = F_c * D_c * G_c / (4.0 * fabs(n_dot_in));
     

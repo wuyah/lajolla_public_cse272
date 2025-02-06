@@ -45,3 +45,7 @@ build/
 
 #vscode related
 .vscode
+
+# hdr image files
+!images/*
+!images_mine/*

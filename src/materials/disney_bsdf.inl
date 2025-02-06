@@ -14,6 +14,11 @@ Spectrum eval_op::operator()(const DisneyBSDF &bsdf) const {
         bsdf.roughness,    
         bsdf.subsurface    
     };
+    DisneyMetal bsdf_metal {
+        bsdf.base_color,  
+        bsdf.roughness,    
+        bsdf.anisotropic    
+    };
     DisneyClearcoat bsdf_clear_coat {
         bsdf.clearcoat_gloss
     };
@@ -40,6 +45,8 @@ Spectrum eval_op::operator()(const DisneyBSDF &bsdf) const {
     Real n_dot_out = dot( dir_out, vertex.geometric_normal );
     Real h_dot_out = dot( dir_out, half_vector );
     Real h_dot_in = dot( dir_in, half_vector );
+    Real n_dot_h = dot( frame.n, half_vector );
+
     Vector3 h_l = to_local(frame, half_vector);
 
     Real specular = eval(
@@ -53,10 +60,6 @@ Spectrum eval_op::operator()(const DisneyBSDF &bsdf) const {
     Real roughness = eval(
         bsdf.roughness, vertex.uv, vertex.uv_screen_size, texture_pool);
     roughness = std::clamp(roughness, Real(0.001), Real(1));
-    // metallic = std::clamp(metallic, Real(0.001), Real(1));
-    // specular_tint = std::clamp(specular_tint, Real(0.01), Real(1));
-    // specular_trans = std::clamp(specular_trans, Real(0.01), Real(1));
-    // specular = std::clamp(specular, Real(0.01), Real(1));
 
     Real sheen = eval( 
         bsdf.sheen, vertex.uv, vertex.uv_screen_size, texture_pool);
@@ -69,35 +72,43 @@ Spectrum eval_op::operator()(const DisneyBSDF &bsdf) const {
         bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool );
     Real anisotropic = eval(
         bsdf.anisotropic, vertex.uv, vertex.uv_screen_size, texture_pool );
-    // anisotropic = std::clamp(anisotropic, Real(0.01), Real(1));
+
     Real eta = dot(vertex.geometric_normal, dir_in) > 0 ? bsdf.eta : 1 / bsdf.eta;
     Real r2 = pow(roughness, 2);
-    Real R_0_eta = ( 1 - eta ) * (1 - eta) / ( (1+eta) * (1+eta) );
-    Real L = luminance(base_color);
-    Spectrum c_tint = L > 0 ? base_color / L : make_const_spectrum(1);
-    Spectrum Ks = (1 - specular_tint) + specular_tint * c_tint;
     
-    Spectrum C0 = specular * R_0_eta * (1 - metallic) * Ks + metallic * base_color;
-
-    Vector3 F_m = C0 + (1-C0) * pow(1 - out_dot_h, Real(5));
-
     if(  n_dot_in <=0 )
     { 
-        return
-           (1-metallic) * specular_trans * f_g;
+        return (1-metallic) * specular_trans * f_g;
     } else {
         // Re-calculate the Metal to make it closer to the base color.
         Real aspect = sqrt( 1 - 0.9 * anisotropic );
         Real alpha_x = fmax( 0.0001, r2 / aspect );
         Real alpha_y = fmax( 0.0001, r2 * aspect );
 
+        Real L = luminance(base_color);
+        Spectrum c_tint = L > 0 ? base_color / L : make_const_spectrum(1);
+
+        Spectrum Ks = (1 - specular_tint) + specular_tint * c_tint;
+        Real R_0_eta = ( 1 - eta ) * (1 - eta) / ( (1+eta) * (1+eta) );
+
+        const Spectrum baseColor = eval(bsdf.base_color,vertex.uv,vertex.uv_screen_size,texture_pool);
+        Spectrum C0 = specular * R_0_eta * (1 - metallic) * Ks + metallic * base_color;
+
+        Spectrum new_metal = C0 + ( 1 - C0 )*pow( 1- out_dot_h ,5);
+        Spectrum origin_metal = baseColor + ( 1-baseColor ) * pow( 1- out_dot_h,5);
+
+        Vector3 h2 = h_l * h_l;
+        Real ax2 = alpha_x * alpha_x;
+        Real ay2 = alpha_y * alpha_y;
+
         Real D_m = 1 / (c_PI  * alpha_x * alpha_y *
-                    pow( (pow(h_l.x / alpha_x, 2) + pow(h_l.y / alpha_y, 2) + pow(h_l.z, 2)), 2)
-                    );
+                    pow( h2.x / ax2+ h2.y / ay2 + h2.z, 2) );
         Real G = smith_masking_disney(to_local(frame, dir_in), Vector2(alpha_x, alpha_y)) *
                 smith_masking_disney(to_local(frame, dir_out), Vector2(alpha_x, alpha_y));
 
-        f_metal = F_m * D_m * G / (4 * n_dot_in );
+        f_metal = eval(bsdf_metal, dir_in, dir_out, vertex, texture_pool, dir);
+        f_metal = f_metal * new_metal / origin_metal;
+
         f_diff = eval(bsdf_diffuse, dir_in, dir_out, vertex, texture_pool, dir);
         f_cc = eval(bsdf_clear_coat, dir_in, dir_out, vertex, texture_pool, dir);
         f_sh = eval(bsdf_sheen, dir_in, dir_out, vertex, texture_pool, dir);
@@ -161,7 +172,7 @@ Real pdf_sample_bsdf_op::operator()(const DisneyBSDF &bsdf) const {
     weights[3] = (1-metallic) * specular_trans;
 
     // metal weight should be zero when this happen 
-    if( !reflect || n_dot_in <=0)
+    if( n_dot_in <=0)
     { 
         return pdf_sample_bsdf( bsdf_glass, dir_in, dir_out, vertex, texture_pool, dir);
     } else {
@@ -184,7 +195,6 @@ Real pdf_sample_bsdf_op::operator()(const DisneyBSDF &bsdf) const {
     pdf += weights[0] * this->operator()(bsdf_diffuse);
     pdf += weights[1] * this->operator()(bsdf_metal);
     pdf += weights[2] * this->operator()(bsdf_clear_coat);
-    
     pdf += weights[3] * this->operator()(bsdf_glass);
 
     return pdf;
@@ -249,12 +259,16 @@ std::optional<BSDFSampleRecord>
 
     // Compute total weight and check for near-zero scenario
     Real total = weights[0] + weights[1] + weights[2] + weights[3];
-
+    
     for(int i=0; i < 4; i++) {
         weights[i] /= total;
     }
 
-    assert( weights[0] + weights[1] + weights[2] + weights[3] == 1 );
+    // if( weights[0] + weights[1] + weights[2] + weights[3] != 1 ) {
+    //     std::cout << weights[0] + weights[1] + weights[2] + weights[3] << std::endl;
+    // }
+
+    // assert( weights[0] + weights[1] + weights[2] + weights[3] == 1 );
 
     Real weightPrefix[5];
     weightPrefix[0] = 0.0;
@@ -262,10 +276,10 @@ std::optional<BSDFSampleRecord>
         weightPrefix[i + 1] = weightPrefix[i] + weights[i];
     }
 
-    assert(weightPrefix[4] == 1);
+    // assert(weightPrefix[4] == 1);
     // Real scaled = std::clamp( rnd_param_w, Real(0), Real(weightPrefix[4]) );
     // Select BSDF component based on random sample rnd_param_w
-    int bsdf_selected = -1;
+    int bsdf_selected = 6;
     for (int i = 1; i <= 4; ++i) {
         if (rnd_param_w <= weightPrefix[i]) {
             bsdf_selected = i - 1;

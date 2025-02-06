@@ -37,6 +37,30 @@ Spectrum eval_op::operator()(const DisneyDiffuse &bsdf) const {
     // assert(subsurface == Real(0.5));
 
 
+    // Oren
+    // ---------------
+    // Real sigma2 = roughness * roughness;
+
+    // // Compute A and B coefficients
+    // Real A = 1 - sigma2 / (2 * (sigma2 + 0.33));
+    // Real B = 0.45 * sigma2 / (sigma2 + 0.09);
+    // Vector3 in_perpendicular = dir_in - n_dot_in * frame.n;
+    // Vector3 out_perpendicular = dir_out - n_dot_out * frame.n;
+
+    // Real theta_in = acos(n_dot_in);
+    // Real theta_out = acos(n_dot_out);
+    // Real phi_diff = acos(dot(normalize(in_perpendicular), normalize(out_perpendicular)));
+
+    // // Compute the BRDF value
+    // Real sin_theta_in = sqrt(1 - n_dot_in * n_dot_in);
+    // Real sin_theta_out = sqrt(1 - n_dot_out * n_dot_out);
+    // Real max_cos = fmax(0, cos(phi_diff));
+
+    // Spectrum base_color = eval(bsdf.base_color, vertex.uv, vertex.uv_screen_size, texture_pool);
+    // Spectrum f_oren_nayar = (A + B * max_cos * sin_theta_in * tan(theta_out)) * base_color / c_PI;
+    
+    // ------------------
+
     return (1 - subsurface) * f_diff + subsurface * f_SS;
     // return f_SS;
 }

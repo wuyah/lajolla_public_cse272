@@ -23,7 +23,7 @@
 template <typename T>
 inline T schlick_fresnel(const T &F0, Real cos_theta) {
     return F0 + (Real(1) - F0) *
-        pow(max(1 - cos_theta, Real(0)), Real(5));
+        pow(1 - cos_theta, Real(5));
 }
 
 /// Fresnel equation of a dielectric interface.
@@ -76,33 +76,33 @@ inline Real smith_masking_gtr2(const Vector3 &v_local, Real roughness) {
     Real alpha = roughness * roughness;
     Real a2 = alpha * alpha;
     Vector3 v2 = v_local * v_local;
-    Real Lambda = (-1.0 + sqrt(1.0 + (v2.x * a2 + v2.y * a2) / v2.z)) / 2.0;
-    return Real(1.0) / (1.0 + Lambda);
+    Real Lambda = (-1 + sqrt(1 + (v2.x * a2 + v2.y * a2) / v2.z)) / 2;
+    return 1 / (1 + Lambda);
+}
+
+inline Real smith_masking_gtr1_anisotropy(const Vector3 &v_local, Real alphaX,Real alphaY) {
+    Real ax2 =  alphaX * alphaX;
+    Real ay2 = alphaY * alphaY;
+    Vector3 v2 = v_local * v_local;
+    Real Lambda = (-1 + sqrt(1 + (v2.x * ax2 + v2.y * ay2) / v2.z)) / 2;
+    return 1 / (1 + Lambda);
 }
 
 inline Real smith_masking_gtr1(const Vector3 &v_local, Real roughness)
 {
     Real a2 = roughness * roughness;
     Vector3 v2 = v_local * v_local;
-    Real lambda = (sqrt(1 + (v2.x * a2 + v2.y * a2) / v2.z) - 1) / 2.0;
-    return 1.0 / (1 + lambda);
+    Real Lambda = (-1 + sqrt(1 + (v2.x * a2 + v2.y * a2) / v2.z)) / 2;
+    return 1 / (1 + Lambda);
 }
 
-
-/// The masking term models the occlusion between the small mirrors of the microfacet models.
-/// See Eric Heitz's paper "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-/// for a great explanation.
-/// https://jcgt.org/published/0003/02/03/paper.pdf
-/// The derivation is based on Smith's paper "Geometrical shadowing of a random rough surface".
-/// Note that different microfacet distributions have different masking terms.
 inline Real smith_masking_disney(const Vector3 &v_local, Vector2 alpha) {
-    Real ax2 = alpha.x * alpha.x;
-    Real ay2 = alpha.y * alpha.y;
+    Real ax2 =  alpha.x * alpha.x;
+    Real ay2 = alpha.y* alpha.y;
     Vector3 v2 = v_local * v_local;
     Real Lambda = (-1 + sqrt(1 + (v2.x * ax2 + v2.y * ay2) / v2.z)) / 2;
     return 1 / (1 + Lambda);
 }
-
 
 /// See "Sampling the GGX Distribution of Visible Normals", Heitz, 2018.
 /// https://jcgt.org/published/0007/04/01/
@@ -147,20 +147,13 @@ inline Vector3 sample_visible_normals_cc(const Vector3 &local_dir_in,const Real 
     Real sinTheta = sqrt(max(Real(0), Real(1) - cosTheta*cosTheta));
     Real phi = Real(2*c_PI) * rnd_param.y;
 
-    // -- Step 2: convert to local cartesian
     Vector3 h_local = {
         sinTheta * std::cos(phi) ,
         sinTheta * std::sin(phi) ,
         cosTheta
     };
 
-    // optional: ensure z>0
-    // if (h_local.z < 0) {
-    //     h_local.z = -h_local.z;
-    // }
-
     return normalize(h_local); // though it should already be unit
-
 }
 
 // Sample method for disney glass:
@@ -181,6 +174,7 @@ inline Vector3 sample_visible_normals_ani(const Vector3 &local_dir_in, Vector2 a
     Real phi = 2 * c_PI * rnd_param.y;
     Real t1 = r * cos(phi);
     Real t2 = r * sin(phi);
+    
     // Vertically scale the position of a sample to account for the projection.
     Real s = (1 + hemi_dir_in.z) / 2;
     t2 = (1 - s) * sqrt(1 - t1 * t1) + s * t2;

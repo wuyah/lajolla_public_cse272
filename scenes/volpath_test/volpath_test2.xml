@@ -8,10 +8,10 @@
 
 	<medium type="homogeneous" id="medium">
 		<rgb name="sigmaA" value="0.1 0.1 0.1"/>
-		<rgb name="sigmaS" value="0.7 0.7 0.7"/>
+		<rgb name="sigmaS" value="0.1 0.1 0.1"/>
 		<float name="scale" value="1"/>
 
-<!-- 		<phase type="hg">
+		<!-- <phase type="hg">
 			<float name="g" value="0.5"/>
 		</phase> -->
 	</medium>

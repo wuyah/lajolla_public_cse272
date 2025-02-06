@@ -20,14 +20,18 @@
 			<float name="anisotropic" value="0.8"/>
 			<float name="eta" value="1.5"/>
 		</bsdf> -->
-		<bsdf type="roughdielectric">
+		<!-- <bsdf type="roughdielectric">
 			<rgb name="baseColor" value="0.82 0.67 0.16"/>
 			<float name="roughness" value="0.1"/>
 			<float name="eta" value="1.5"/>
+		</bsdf> -->
+
+		<bsdf type="disneysheen">
+			<rgb name="baseColor" value="0.82 0.67 0.16"/>
+			<float name="sheenTint" value="0.5"/>
 		</bsdf>
 
-
-<!-- 		<bsdf type="roughplastic">
+		<!-- <bsdf type="roughplastic">
 			<rgb name="diffuseReflectance" value="0.0 0.0 0.0"/>
 			<float name="roughness" value="0.5"/>
 		</bsdf> -->
@@ -38,7 +42,7 @@
 			<float name="subsurface" value="0.0"/>
 		</bsdf> -->
 
-<!-- 		<bsdf type="disneymetal">
+		<!-- <bsdf type="disneymetal">
 			<rgb name="baseColor" value="0.5 0.5 0.5"/>
 			<float name="roughness" value="0.2"/>
 			<float name="anisotropic" value="0.5"/>
@@ -54,7 +58,7 @@
 	</shape>
 
 	<shape type="sphere">
-		<point name="center" x="0" y="0" z="-10"/>
+		<point name="center" x="10" y="0" z="0"/>
 		<!-- <point name="center" x="10" y="0" z="0"/> -->
 		<float name="radius" value="0.1"/>
 
