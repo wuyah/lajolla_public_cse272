@@ -2,6 +2,7 @@
 
 #include "lajolla.h"
 #include "spectrum.h"
+#include <iostream>
 
 /// A microfacet model assumes that the surface is composed of infinitely many little mirrors/glasses.
 /// The orientation of the mirrors determines the amount of lights reflected.
@@ -32,6 +33,18 @@ inline T schlick_fresnel(const T &F0, Real cos_theta) {
 /// n_dot_t: abs(cos(transmission angle))
 /// eta: eta_transmission / eta_incident
 inline Real fresnel_dielectric(Real n_dot_i, Real n_dot_t, Real eta) {
+
+
+    // if( !(n_dot_i >= 0 || n_dot_t >= 0 || eta > 0 )) {
+    //     std::cout << n_dot_t  << " " <<n_dot_i <<std::endl;
+    //     // exit(-1);
+    //     return 1;
+    // }
+
+    // assert(n_dot_t >= 0 );
+
+    // assert(n_dot_t >= 0 && eta > 0);
+    
     assert(n_dot_i >= 0 && n_dot_t >= 0 && eta > 0);
     Real rs = (n_dot_i - eta * n_dot_t) / (n_dot_i + eta * n_dot_t);
     Real rp = (eta * n_dot_i - n_dot_t) / (eta * n_dot_i + n_dot_t);

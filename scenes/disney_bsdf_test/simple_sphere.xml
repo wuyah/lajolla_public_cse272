@@ -25,16 +25,16 @@
 			<float name="roughness" value="0.1"/>
 			<float name="eta" value="1.5"/>
 		</bsdf> -->
-
+<!-- 
 		<bsdf type="disneysheen">
 			<rgb name="baseColor" value="0.82 0.67 0.16"/>
 			<float name="sheenTint" value="0.5"/>
-		</bsdf>
+		</bsdf> -->
 
-		<!-- <bsdf type="roughplastic">
+		<bsdf type="roughplastic">
 			<rgb name="diffuseReflectance" value="0.0 0.0 0.0"/>
 			<float name="roughness" value="0.5"/>
-		</bsdf> -->
+		</bsdf>
 
 <!-- 		<bsdf type="disneydiffuse">
 			<rgb name="baseColor" value="0.5 0.5 0.5"/>

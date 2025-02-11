@@ -104,6 +104,14 @@ Image3 vol_path_render(const Scene &scene) {
     int w = scene.camera.width, h = scene.camera.height;
     Image3 img(w, h);
 
+    // Define the patch you want to render.
+    // In this example, a 64x64 patch at the image center.
+    int patch_w = 64, patch_h = 64;
+    int patch_x0 = (w - patch_w) / 2;
+    int patch_y0 = (h - patch_h) / 2;
+    int patch_x1 = patch_x0 + patch_w;
+    int patch_y1 = patch_y0 + patch_h;
+
     constexpr int tile_size = 16;
     int num_tiles_x = (w + tile_size - 1) / tile_size;
     int num_tiles_y = (h + tile_size - 1) / tile_size;
@@ -125,20 +133,32 @@ Image3 vol_path_render(const Scene &scene) {
 
     ProgressReporter reporter(num_tiles_x * num_tiles_y);
     parallel_for([&](const Vector2i &tile) {
-        // Use a different rng stream for each thread.
+        // Use a different RNG stream for each thread.
         pcg32_state rng = init_pcg32(tile[1] * num_tiles_x + tile[0]);
         int x0 = tile[0] * tile_size;
         int x1 = min(x0 + tile_size, w);
         int y0 = tile[1] * tile_size;
         int y1 = min(y0 + tile_size, h);
+
+        // Clip the tile bounds to the patch bounds.
+        x0 = max(x0, patch_x0);
+        x1 = min(x1, patch_x1);
+        y0 = max(y0, patch_y0);
+        y1 = min(y1, patch_y1);
+
+        // If the tile doesn't intersect the patch, skip it.
+        if (x0 >= x1 || y0 >= y1) {
+            reporter.update(1);
+            return;
+        }
+
         for (int y = y0; y < y1; y++) {
             for (int x = x0; x < x1; x++) {
                 Spectrum radiance = make_zero_spectrum();
                 int spp = scene.options.samples_per_pixel;
                 for (int s = 0; s < spp; s++) {
                     Spectrum L = f(scene, x, y, rng);
-                    if (isfinite(L)) {
-                        // Hacky: exclude NaNs in the rendering.
+                    if (isfinite(L)) {  // Exclude any NaNs.
                         radiance += L;
                     }
                 }
