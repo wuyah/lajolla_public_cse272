@@ -496,7 +496,7 @@ Spectrum next_event_estimation_blend(
     int shadow_bounces = 0;
     Real p_trans_dir = 1.f;  // for multiple importance sampling
 
-    Vector3 p_temp  =p;
+    Vector3 p_temp = p;
     while (true) {
         Ray shadow_ray{p_temp, dir_light,
                        get_shadow_epsilon(scene),
@@ -812,16 +812,7 @@ Spectrum next_event_estimation(
     Spectrum p_trans_dir = make_const_spectrum(1);
     Spectrum p_trans_nee = make_const_spectrum(1);
 
-    // auto outer_start = std::chrono::high_resolution_clock::now();
     while (true) {
-
-        // auto outer_now = std::chrono::high_resolution_clock::now();
-        // if (std::chrono::duration_cast<std::chrono::milliseconds>(outer_now - outer_start).count() > OUTER_LOOP_THRESHOLD_MS) {
-        //     // std::cout << "Warning: Outer while loop in NEE time is too long."<< std::endl;
-        //     // std::cout << "Loop count" << i << std::endl;
-        //     // break;
-        //     // 可选：break; 或者仅仅输出警告继续循环
-        // }
         Ray shadow_ray{p, dir_light,
                        get_shadow_epsilon(scene),
                        (1 - get_shadow_epsilon(scene)) *
@@ -843,13 +834,8 @@ Spectrum next_event_estimation(
             Real accum_t = 0;
             int iteration = 0;
 
-            auto inner_start = std::chrono::high_resolution_clock::now();
 
             while (true) {
-                auto inner_now = std::chrono::high_resolution_clock::now();
-                // if (std::chrono::duration_cast<std::chrono::milliseconds>(inner_now - inner_start).count() > INNER_LOOP_THRESHOLD_MS) {
-                //     std::cout << "Warning: INNER while loop in NEE time is too long."  << std::endl;
-                // }
         
                 // violation or exceed maxium
                 if (iteration >= scene.options.max_null_collisions || 
@@ -973,16 +959,7 @@ Spectrum vol_path_tracing(const Scene &scene,
     Real dir_pdf = 0;
     Real eta_scale = Real(1);
 
-    // auto outer_start = std::chrono::high_resolution_clock::now();
     while (true) {
-        // auto outer_now = std::chrono::high_resolution_clock::now();
-        // if (std::chrono::duration_cast<std::chrono::milliseconds>(abs(outer_now - outer_start)).count() > OUTE_M_LOOP_THRESHOLD_MS) {
-        //     std::cout << "Warning: Outer while loop in Main time is too long." <<std::endl;
-        //     std::cout << ray.org << std::endl;
-        //     // << "bounces" << bounces << std::endl;
-        //     // break;
-        //     // 可选：break; 或者仅仅输出警告继续循环
-        // }
 
         bool scatter = false;
         auto isect = intersect(scene, ray, ray_diff);
@@ -1004,54 +981,47 @@ Spectrum vol_path_tracing(const Scene &scene,
             int channel = std::clamp( int(u*3), 0, 2 );
             Real accum_t = 0.f;
             int iteration = 0;
-            // std::cout << "start channel sampling" << std::endl;
-            // auto inner_start = std::chrono::high_resolution_clock::now();
             while(true) {
-                // auto inner_now = std::chrono::high_resolution_clock::now();
-                // if (std::chrono::duration_cast<std::chrono::milliseconds>(abs(inner_now - inner_start)).count() > INNER_M_LOOP_THRESHOLD_MS) {
-                //     std::cout << "Warning: INNER while loop in Main time is too long." << std::endl;
-                //     // break;
-                //     // 可选：break; 或者仅仅输出警告继续循环
-                // }
         
                 if(majorant[channel] <= 0 || 
                     iteration >= scene.options.max_null_collisions) 
                     break;
                 
-                    Real t = -log(1 - next_pcg32_real<Real>(rng)) / majorant[channel];
-                    Real dt = t_hit - accum_t;
-                    accum_t = min(t_hit, accum_t + t);
-                    if (t < dt) {
-                        // haven't reached the/a surface, sample from real/fake particle events
-                        Vector3 p = ray.org + accum_t * ray.dir;
-                        Spectrum sigma_t = get_sigma_a(medium, p) + get_sigma_s(medium, p);
-                        Spectrum real_prob = sigma_t / majorant;
-                        if (next_pcg32_real<Real>(rng) < real_prob[channel]) {
-                            // real, scatter
-                            scatter = true;
-                            transmittance *= exp(-majorant * t) / max(majorant);
-                            trans_dir_pdf *= exp(-majorant * t) * majorant * real_prob / max(majorant);
-                            ray.org = ray.org + accum_t * ray.dir;
-                            break;
-                        } else {
-                            // fake
-                            transmittance *= exp(-majorant * t) * (majorant - sigma_t) / max(majorant);
-                            trans_dir_pdf *= exp(-majorant * t) * majorant * (1 - real_prob) / max(majorant);
-                            trans_nee_pdf *= exp(-majorant * t) * majorant / max(majorant);
-                        }
-                    } else {
-                        // hit a surface
-                        ray.org += t_hit * ray.dir;
-                        transmittance *= exp(-majorant * dt);
-                        trans_dir_pdf *= exp(-majorant * dt);
-                        trans_nee_pdf *= exp(-majorant * dt);
+                Real t = -log(1 - next_pcg32_real<Real>(rng)) / majorant[channel];
+                Real dt = t_hit - accum_t;
+                accum_t = min(t_hit, accum_t + t);
+                if (t < dt) {
+                    // haven't reached the/a surface, sample from real/fake particle events
+                    Vector3 p = ray.org + accum_t * ray.dir;
+                    Spectrum sigma_t = get_sigma_a(medium, p) + get_sigma_s(medium, p);
+                    Spectrum real_prob = sigma_t / majorant;
+                    if (next_pcg32_real<Real>(rng) < real_prob[channel]) {
+                        // real, scatter
+                        scatter = true;
+                        transmittance *= exp(-majorant * t) / max(majorant);
+                        trans_dir_pdf *= exp(-majorant * t) * majorant * real_prob / max(majorant);
+                        ray.org = ray.org + accum_t * ray.dir;
                         break;
+                    } else {
+                        // fake
+                        transmittance *= exp(-majorant * t) * (majorant - sigma_t) / max(majorant);
+                        trans_dir_pdf *= exp(-majorant * t) * majorant * (1 - real_prob) / max(majorant);
+                        trans_nee_pdf *= exp(-majorant * t) * majorant / max(majorant);
                     }
-                    iteration++;
+                } else {
+                    // hit a surface
+                    ray.org += t_hit * ray.dir;
+                    transmittance *= exp(-majorant * dt);
+                    trans_dir_pdf *= exp(-majorant * dt);
+                    trans_nee_pdf *= exp(-majorant * dt);
+                    break;
                 }
+                iteration++;
+            }
             multi_trans_pdf *= trans_dir_pdf;
             multi_nee_pdf *= trans_nee_pdf;        
-        } else if(isect) {
+        } 
+        if(!scatter && isect) {
             ray.org = isect->position;
             ray.tnear = get_intersection_epsilon(scene);
         } 
@@ -1087,13 +1057,13 @@ Spectrum vol_path_tracing(const Scene &scene,
 
         // index-matching medium update
         if(!scatter && isect && isect->material_id == -1) {
-            // ray.org = isect->position; 
+            ray.org = isect->position; 
             ray.tnear = get_intersection_epsilon(scene);
 
             medium_id = update_medium( *isect, ray, medium_id );
             bounces++;
-            Vector3 N = dot(ray.dir, isect->geometric_normal) > 0 ? isect->geometric_normal : -isect->geometric_normal;
-            ray.org = isect->position + N * get_intersection_epsilon(scene);
+            // Vector3 N = dot(ray.dir, isect->geometric_normal) > 0 ? isect->geometric_normal : -isect->geometric_normal;
+            // ray.org = isect->position + N * get_intersection_epsilon(scene);
             continue;
         }
 
@@ -1114,7 +1084,7 @@ Spectrum vol_path_tracing(const Scene &scene,
 
             // Sampling phase
             Vector2 rnd_param{next_pcg32_real<Real>(rng), next_pcg32_real<Real>(rng)};
-            auto phase_func = get_phase_function( scene.media[medium_id] );
+            const PhaseFunction& phase_func = get_phase_function( scene.media[medium_id] );
             auto phase_sample = sample_phase_function(phase_func, -ray.dir, rnd_param );
 
             Real phase_pdf = pdf_sample_phase(phase_func, -ray.dir, *phase_sample);
@@ -1126,10 +1096,8 @@ Spectrum vol_path_tracing(const Scene &scene,
             nee_p_cache = ray.org;
             multi_trans_pdf = make_const_spectrum(1);
             multi_nee_pdf = make_const_spectrum(1);
-            // ray.org = ray.org;
             ray.dir = *phase_sample;
             ray.tnear = get_intersection_epsilon(scene);
-
             // ray = Ray{ ray.org, *phase_sample,  get_intersection_epsilon(scene), infinity<Real>()};
         } else if(isect && isect->material_id != -1){ // bsdf_branch
             // hit the brdf surface.
@@ -1164,11 +1132,11 @@ Spectrum vol_path_tracing(const Scene &scene,
             Spectrum f = eval(mat, dir_view, dir_out, *isect, scene.texture_pool);
             current_path_throughput *= f / bsdf_pdf; 
 
-            medium_id = update_medium(*isect, ray, medium_id);
 
             if (bsdf_sample->eta != 0) {
                 // refracted, update material
                 eta_scale /= (bsdf_sample->eta * bsdf_sample->eta);
+                medium_id = update_medium(*isect, ray, medium_id);
             }
 
             dir_pdf = bsdf_pdf;
@@ -1176,14 +1144,12 @@ Spectrum vol_path_tracing(const Scene &scene,
             multi_trans_pdf = make_const_spectrum(1);
             multi_nee_pdf = make_const_spectrum(1);
             // int sign = dot( dir_out )
-            Vector3 N = dot(ray.dir, isect->geometric_normal) > 0 ? isect->geometric_normal : -isect->geometric_normal;
-            ray.org = isect->position + N * get_intersection_epsilon(scene);
 
             // Update ray
             ray.dir = dir_out;
             ray.tnear = get_intersection_epsilon(scene);
-        } 
-    
+            ray.org = isect->position;
+        }
 
         // Russian
         Real rr_prob = 1;
