@@ -292,7 +292,7 @@ Spectrum next_event_estimation_scatter(const Scene& scene, Vector3 dir_view, int
         }
 
         if(shadow_medium != -1) {
-            auto medium = scene.media[shadow_medium];
+            const Medium &medium = scene.media[shadow_medium];
             Real sigma_s = get_sigma_s(medium, shadow_ray.org)[0]; 
             Real sigma_a = get_sigma_a(medium, shadow_ray.org)[0];  
             Real sigma_t = sigma_s + sigma_a;     
@@ -509,7 +509,7 @@ Spectrum next_event_estimation_blend(
         }
 
         if(shadow_medium != -1) {
-            auto medium = scene.media[shadow_medium];
+            const Medium &medium = scene.media[shadow_medium];
             Real sigma_s = get_sigma_s(medium, p)[0]; 
             Real sigma_a = get_sigma_a(medium, p)[0];  
             Real sigma_t = sigma_s + sigma_a;     
@@ -776,11 +776,6 @@ Spectrum vol_path_tracing_5(const Scene &scene,
     
     return radiance;
 }
-
-const int OUTE_M_LOOP_THRESHOLD_MS = 10000;
-const int INNER_M_LOOP_THRESHOLD_MS = 10000;
-const int OUTER_LOOP_THRESHOLD_MS = 10000;
-const int INNER_LOOP_THRESHOLD_MS = 10000;
 
 
 // final nee with both bsdf and surface,
